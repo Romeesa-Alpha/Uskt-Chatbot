@@ -152,7 +152,7 @@ def main():
     # st.sidebar.header("Upload PDF")
     # pdf_file = st.sidebar.file_uploader("Upload a PDF file", type="pdf")
 
-    pdf_file = "./University of Sialkot chatbot.pdf"
+    pdf_file = "./public/University of Sialkot chatbot.pdf"
     if pdf_file:
         with st.spinner("Processing PDF..."):
             st.session_state.chunks = get_or_create_chunks(pdf_file)
