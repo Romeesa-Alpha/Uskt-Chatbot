@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # Configure Streamlit page
-st.set_page_config(page_title="ChatWithPDF", page_icon="📄", layout="wide")
+st.set_page_config(page_title="University OF Sialkot", page_icon="📄", layout="wide")
 
 # Initialize Groq client
 try:
@@ -28,13 +28,15 @@ except Exception as e:
     st.error("Failed to initialize the AI model. Please check your API key.")
 
 # List of available models
-MODELS = [
-    "llama3-70b-8192",
-    "llama3-8b-8192",
-    "gemma-7b-it",
-    "gemma2-9b-it",
-    "mixtral-8x7b-32768"
-]
+# MODELS = [
+#     "llama3-70b-8192",
+#     "llama3-8b-8192",
+#     "gemma-7b-it",
+#     "gemma2-9b-it",
+#     "mixtral-8x7b-32768"
+# ]
+
+Model = "llama3-70b-8192"
 
 @st.cache_data
 def process_pdf(file):
@@ -118,7 +120,7 @@ def find_most_relevant_chunks(query, chunks, vectorizer, top_k=2):
 
 def get_ai_response(messages, context, model):
     try:
-        system_message = {"role": "system", "content": "You are a helpful assistant for answering questions about the given PDF content. Use the provided context to answer questions, but also consider the conversation history."}
+        system_message = {"role": "system", "content": "You are a helpful university chatbot assistant for answering university of sialkot related questions about the given PDF content. Use the provided context to answer questions, but also consider the conversation history."}
 
         # Combine system message, conversation history, and the new query with context
         all_messages = [system_message] + messages[:-1] + [{"role": "user", "content": f"Context: {context}\n\nBased on this context and our previous conversation, please answer the following question: {messages[-1]['content']}"}]
@@ -141,27 +143,28 @@ def main():
     if 'messages' not in st.session_state:
         st.session_state.messages = []
     if 'model' not in st.session_state:
-        st.session_state.model = MODELS[0]
+        st.session_state.model = Model
     if 'chunks' not in st.session_state:
         st.session_state.chunks = []
     if 'vectorizer' not in st.session_state:
         st.session_state.vectorizer = None
 
-    st.sidebar.header("Upload PDF")
-    pdf_file = st.sidebar.file_uploader("Upload a PDF file", type="pdf")
+    # st.sidebar.header("Upload PDF")
+    # pdf_file = st.sidebar.file_uploader("Upload a PDF file", type="pdf")
 
+    pdf_file = "./University of Sialkot chatbot.pdf"
     if pdf_file:
         with st.spinner("Processing PDF..."):
             st.session_state.chunks = get_or_create_chunks(pdf_file)
             st.session_state.vectorizer = get_vectorizer(st.session_state.chunks)
         if st.session_state.chunks and st.session_state.vectorizer:
-            st.sidebar.success("PDF processed successfully!")
+            st.success("PDF processed successfully!")
         else:
-            st.sidebar.error("Failed to process PDF. Please try again.")
+            st.error("Failed to process PDF. Please try again.")
 
-    selected_model = st.selectbox("Select Model", MODELS, index=MODELS.index(st.session_state.model))
-    if selected_model != st.session_state.model:
-        st.session_state.model = selected_model
+    # selected_model = st.selectbox("Select Model", MODELS, index=MODELS.index(st.session_state.model))
+    # if selected_model != st.session_state.model:
+    #     st.session_state.model = selected_model
 
     # Display chat history
     for message in st.session_state.messages:
