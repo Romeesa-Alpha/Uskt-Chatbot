@@ -149,18 +149,18 @@ def main():
     if 'vectorizer' not in st.session_state:
         st.session_state.vectorizer = None
 
-    # st.sidebar.header("Upload PDF")
-    # pdf_file = st.sidebar.file_uploader("Upload a PDF file", type="pdf")
+    st.sidebar.header("Upload PDF")
+    pdf_file = st.sidebar.file_uploader("Upload a PDF file", type="pdf")
 
-    pdf_file = "./public/University of Sialkot chatbot.pdf"
+    # pdf_file = "University of Sialkot chatbot.pdf"
     if pdf_file:
         with st.spinner("Processing PDF..."):
             st.session_state.chunks = get_or_create_chunks(pdf_file)
             st.session_state.vectorizer = get_vectorizer(st.session_state.chunks)
         if st.session_state.chunks and st.session_state.vectorizer:
-            st.success("PDF processed successfully!")
+            st.sidebar.success("PDF processed successfully!")
         else:
-            st.error("Failed to process PDF. Please try again.")
+            st.sidebar.error("Failed to process PDF. Please try again.")
 
     # selected_model = st.selectbox("Select Model", MODELS, index=MODELS.index(st.session_state.model))
     # if selected_model != st.session_state.model:
@@ -172,7 +172,7 @@ def main():
             st.markdown(message["content"])
 
     # Chat input
-    if prompt := st.chat_input("Ask a question about your PDF"):
+    if prompt := st.chat_input("Ask a question about Uskt"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
