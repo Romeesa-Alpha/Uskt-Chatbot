@@ -137,7 +137,7 @@ def get_ai_response(messages, context, model):
         return "I'm sorry, but I encountered an error while processing your request. Please try again."
 
 def main():
-    st.title("ChatWithPDF")
+    st.title("Chat With Uskt Chatbot")
 
     # Initialize session state variables
     if 'messages' not in st.session_state:
