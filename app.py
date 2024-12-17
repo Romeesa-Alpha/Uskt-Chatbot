@@ -22,7 +22,9 @@ st.set_page_config(page_title="University OF Sialkot", page_icon="📄", layout=
 
 # Initialize Groq client
 try:
-    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    # client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    client = Groq(api_key="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")
+
 except Exception as e:
     logger.error(f"Failed to initialize Groq client: {e}")
     st.error("Failed to initialize the AI model. Please check your API key.")
@@ -149,18 +151,29 @@ def main():
     if 'vectorizer' not in st.session_state:
         st.session_state.vectorizer = None
 
-    st.sidebar.header("Upload PDF")
-    pdf_file = st.sidebar.file_uploader("Upload a PDF file", type="pdf")
+    # st.sidebar.header("Upload PDF")
+    # pdf_file = st.sidebar.file_uploader("Upload a PDF file", type="pdf")
+    pdf_file = 'uskt_data'
 
     # pdf_file = "University of Sialkot chatbot.pdf"
     if pdf_file:
-        with st.spinner("Processing PDF..."):
-            st.session_state.chunks = get_or_create_chunks(pdf_file)
-            st.session_state.vectorizer = get_vectorizer(st.session_state.chunks)
-        if st.session_state.chunks and st.session_state.vectorizer:
-            st.sidebar.success("PDF processed successfully!")
-        else:
-            st.sidebar.error("Failed to process PDF. Please try again.")
+        st.session_state.chunks = get_or_create_chunks(pdf_file)
+        st.session_state.vectorizer = get_vectorizer(st.session_state.chunks)
+    if st.session_state.chunks and st.session_state.vectorizer:
+        st.sidebar.success("PDF processed successfully!")
+    else:
+        st.sidebar.error("Failed to process PDF. Please try again.")
+
+
+    # # pdf_file = "University of Sialkot chatbot.pdf"
+    # if pdf_file:
+    #     with st.spinner("Processing PDF..."):
+    #         st.session_state.chunks = get_or_create_chunks(pdf_file)
+    #         st.session_state.vectorizer = get_vectorizer(st.session_state.chunks)
+    #     if st.session_state.chunks and st.session_state.vectorizer:
+    #         st.sidebar.success("PDF processed successfully!")
+    #     else:
+    #         st.sidebar.error("Failed to process PDF. Please try again.")
 
     # selected_model = st.selectbox("Select Model", MODELS, index=MODELS.index(st.session_state.model))
     # if selected_model != st.session_state.model:
