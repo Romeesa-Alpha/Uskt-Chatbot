@@ -9,7 +9,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import concurrent.futures
 import logging
-from twilio.rest import Client # type: ignore
 import time
 from pathlib import Path
 
@@ -21,36 +20,6 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 GROQ_API_KEY= os.getenv("GROQ_API_KEY")
-Account_SID = os.getenv("Account_SID")
-Auth_Token = os.getenv("Auth_Token")
-Twilio_Number= os.getenv("Twilio_Number")
-Recipient_Number = os.getenv("Recipient_Number")
-
-
-
-
-
-############################## whatsapp message send using TWilio ######################333
-def send_to_whatsapp(conversation_log):
-    try:
-        # Twilio account credentials
-        account_sid = Account_SID
-        auth_token = Auth_Token
-        client = Client(account_sid, auth_token)
-
-        # Format the log as a readable string
-        log_text = "\n".join([f"{msg['role']}: {msg['content']}" for msg in conversation_log])
-
-        # Send to WhatsApp
-        message = client.messages.create(
-            from_=Twilio_Number,  # Twilio's sandbox WhatsApp number
-            to= Recipient_Number,  # Your WhatsApp number
-            body=f"Conversation Log:\n{log_text}"
-        )
-        print("WhatsApp message sent:", message.sid)
-    except Exception as e:
-        print("Failed to send WhatsApp message:", str(e))
-
 
 # Configure Streamlit page
 # st.set_page_config(page_title="University OF Sialkot", page_icon="📄", layout="wide")
