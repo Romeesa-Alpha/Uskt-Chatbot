@@ -9,6 +9,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import concurrent.futures
 import logging
+from twilio.rest import Client # type: ignore
+import time
+from pathlib import Path
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -17,14 +20,63 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
+GROQ_API_KEY= os.getenv("GROQ_API_KEY")
+Account_SID = os.getenv("Account_SID")
+Auth_Token = os.getenv("Auth_Token")
+Twilio_Number= os.getenv("Twilio_Number")
+Recipient_Number = os.getenv("Recipient_Number")
+
+
+
+
+
+############################## whatsapp message send using TWilio ######################333
+def send_to_whatsapp(conversation_log):
+    try:
+        # Twilio account credentials
+        account_sid = Account_SID
+        auth_token = Auth_Token
+        client = Client(account_sid, auth_token)
+
+        # Format the log as a readable string
+        log_text = "\n".join([f"{msg['role']}: {msg['content']}" for msg in conversation_log])
+
+        # Send to WhatsApp
+        message = client.messages.create(
+            from_=Twilio_Number,  # Twilio's sandbox WhatsApp number
+            to= Recipient_Number,  # Your WhatsApp number
+            body=f"Conversation Log:\n{log_text}"
+        )
+        print("WhatsApp message sent:", message.sid)
+    except Exception as e:
+        print("Failed to send WhatsApp message:", str(e))
+
+
 # Configure Streamlit page
-st.set_page_config(page_title="University OF Sialkot", page_icon="📄", layout="wide")
+# st.set_page_config(page_title="University OF Sialkot", page_icon="📄", layout="wide")
+
+page_bd_img = """
+<style> 
+        [data-testid="stHeader"]{
+            background-color:rgb(38, 136, 206);
+        }
+        
+        [data-testid="stAppViewContainer"]{
+        background-color: #F8F4FF;
+        background-image: radial-gradient(#9BDDFF 1px, #F8F4FF 1px);
+        background-size: 30px 30px;
+        }
+
+        </style>
+
+"""
+
+st.markdown(page_bd_img, unsafe_allow_html=True)
+
 
 # Initialize Groq client
 try:
-    # client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-    client = Groq(api_key="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")
-
+    client = Groq(api_key=GROQ_API_KEY)
 except Exception as e:
     logger.error(f"Failed to initialize Groq client: {e}")
     st.error("Failed to initialize the AI model. Please check your API key.")
@@ -39,6 +91,7 @@ except Exception as e:
 # ]
 
 Model = "llama3-70b-8192"
+# Model = "mixtral-8x7b-32768"
 
 @st.cache_data
 def process_pdf(file):
@@ -66,29 +119,104 @@ def extract_text(page):
         logger.warning(f"Error extracting text from page: {e}")
         return ""
 
+# @st.cache_data
+# def split_into_chunks(text, chunk_size=1000, overlap=150):
+#     words = text.split()
+#     chunks = []
+#     for i in range(0, len(words), chunk_size - overlap):
+#         chunk = ' '.join(words[i:i + chunk_size])
+#         chunks.append(chunk)
+#     return chunks
+
 @st.cache_data
-def split_into_chunks(text, chunk_size=1500, overlap=100):
-    words = text.split()
+def split_into_chunks(text, chunk_size=1000, overlap=100):
+
+    logger.warning(f"Text for Cunks : {len(text)}")
+
+    # Validate inputs
+    if chunk_size <= overlap:
+        raise ValueError("Chunk size must be greater than overlap.")
+
     chunks = []
-    for i in range(0, len(words), chunk_size - overlap):
-        chunk = ' '.join(words[i:i + chunk_size])
-        chunks.append(chunk)
+    start = 0
+    
+    # Generate chunks with overlap
+    while start < len(text):
+        end = start + chunk_size
+        chunk = text[start:end]
+        chunks.append(chunk.strip())  # Remove any trailing whitespace
+        start += chunk_size - overlap  # Move the start pointer with overlap
+    
+    logger.warning(f"Chunks size is : {len(chunks)}")
     return chunks
 
+
+
+# @st.cache_data
+# def get_or_create_chunks(file_path):
+#     try:
+#         with open(file_path, 'rb') as file:  # Open in binary read mode
+#             file_content = file.read()  # Read the file content as bytes
+#             file_hash = hashlib.md5(file_content).hexdigest()
+
+#         cache_file = f"cache/{file_hash}_chunks.pkl"
+#         if os.path.exists(cache_file):
+#             with open(cache_file, 'rb') as f:
+#                 return pickle.load(f)
+
+#         with open(file_path, 'rb') as file:
+#             text = process_pdf(file)  
+#         chunks = split_into_chunks(text)
+
+#         os.makedirs('cache', exist_ok=True)
+#         with open(cache_file, 'wb') as f:
+#             pickle.dump(chunks, f)
+
+#         return chunks
+#     except Exception as e:
+#         logger.error(f"Error in get_or_create_chunks: {e}")
+#         print("Failed to process the PDF chunks. Please try again.")
+#         return []
+
 @st.cache_data
-def get_or_create_chunks(file):
+def get_or_create_chunks(file_paths):
     try:
-        file_hash = hashlib.md5(file.read()).hexdigest()
-        file.seek(0)
+        combined_text = ""  # Initialize an empty string to hold combined text
+        
+        for file_path in file_paths:
+            try:
+                with open(file_path, 'rb') as file:
+                    file_content = file.read()  # Read the file content as bytes
+                    file_hash = hashlib.md5(file_content).hexdigest()
 
-        cache_file = f"cache/{file_hash}_chunks.pkl"
-        if os.path.exists(cache_file):
-            with open(cache_file, 'rb') as f:
-                return pickle.load(f)
+                cache_file = f"cache/{file_hash}_chunks.pkl"
+                if os.path.exists(cache_file):
+                    with open(cache_file, 'rb') as f:
+                        cached_chunks = pickle.load(f)
+                        combined_text += " ".join(cached_chunks)  # Combine cached chunks
+                        continue
 
-        text = process_pdf(file)
-        chunks = split_into_chunks(text)
+                # If not cached, process the file and extract text
+                with open(file_path, 'rb') as file:
+                    try:
+                        text = process_pdf(file)  # Replace with robust text extraction
+                    except Exception as e:
+                        logger.warning(f"Error processing {file_path}: {e}")
+                        continue
 
+                    combined_text += text  # Combine text from all files
+            except Exception as file_error:
+                logger.warning(f"Skipping file {file_path} due to error: {file_error}")
+                continue
+
+        
+
+        # Split the combined text into chunks
+        chunks = split_into_chunks(combined_text)
+
+        # Cache the chunks (use a single hash for the combined text)
+        combined_hash = hashlib.md5(combined_text.encode('utf-8')).hexdigest()
+        cache_file = f"cache/{combined_hash}_chunks.pkl"
         os.makedirs('cache', exist_ok=True)
         with open(cache_file, 'wb') as f:
             pickle.dump(chunks, f)
@@ -96,8 +224,8 @@ def get_or_create_chunks(file):
         return chunks
     except Exception as e:
         logger.error(f"Error in get_or_create_chunks: {e}")
-        st.error("Failed to process the PDF chunks. Please try again.")
         return []
+
 
 @st.cache_resource
 def get_vectorizer(chunks):
@@ -108,7 +236,7 @@ def get_vectorizer(chunks):
         st.error("Failed to create text vectorizer. Please try again.")
         return None
 
-def find_most_relevant_chunks(query, chunks, vectorizer, top_k=2):
+def find_most_relevant_chunks(query, chunks, vectorizer,top_k):
     try:
         chunk_vectors = vectorizer.transform(chunks)
         query_vector = vectorizer.transform([query])
@@ -122,25 +250,89 @@ def find_most_relevant_chunks(query, chunks, vectorizer, top_k=2):
 
 def get_ai_response(messages, context, model):
     try:
-        system_message = {"role": "system", "content": "You are a helpful university chatbot assistant for answering university of sialkot related questions about the given PDF content. Use the provided context to answer questions, but also consider the conversation history."}
-
+        system_message = {"role": "system", "content": "You are a helpful university chatbot assistant for answering university of sialkot related questions about the given PDF content. Use the provided context to answer questions, but also consider the conversation history. if the asnwer is not in context then say that bot is still under construction "}
+        system_message2 = {"role": "system", "content": " This is the generate fee of programs and admisson, but it can be vary by speciic program so first take look in program detail if the details is note exsis then you can use it, Admission Fee: Rs. 15,000, Registration Fee: Rs. 15,000, Asosiative Degree Program (ADP) one semester fee is  86,515, Bs program one semester fee is 95,832, MS program one semester fee Rs 113,135, PHD program fee for one semester is Rs. 167,706 "}
+        system_message3 = {"role": "system", "content": "write positive intro if someone ask about a personality that does not exist in context"}
+        
         # Combine system message, conversation history, and the new query with context
-        all_messages = [system_message] + messages[:-1] + [{"role": "user", "content": f"Context: {context}\n\nBased on this context and our previous conversation, please answer the following question: {messages[-1]['content']}"}]
+        all_messages = [system_message]+ [system_message2]+ [system_message3]+ messages[:-1] + [{"role": "user", "content": f"Context: {context}\n\nBased on this context and our previous conversation, please answer the following question: {messages[-1]['content']}"}]
 
         chat_completion = client.chat.completions.create(
             messages=all_messages,
             model=model,
-            max_tokens=2048,
-            temperature=0.7
+            max_tokens=1024,
+            temperature=0.3
         )
         return chat_completion.choices[0].message.content
     except Exception as e:
         logger.error(f"Error generating AI response: {e}")
-        return "I'm sorry, but I encountered an error while processing your request. Please try again."
+        return "I'm sorry, Chat session compelete please reset chat by clicking on reset button"
+
+
+def render_message(message, role):
+    # Define CSS for alignmentasa
+    if role == "assistant":
+        # Left-aligned messages (bot)
+        alignment = "left"
+        bg_color = "#f0f0f0"  # Light gray for bot
+        text_color = "#000000"  # Black text
+        icon = "🤖"  # Chatbot icon (or use an image URL)
+        st.markdown(
+        f"""
+        <div style='display: flex; justify-content: {alignment}; margin-bottom: 10px;'>
+            <div style='display: flex; align-items: center; max-width: 70%; 
+                        background-color: {bg_color}; color: {text_color}; 
+                        padding: 10px; border-radius: 10px;'>
+                <span style='margin-right: 10px;'>{icon}</span>  <!-- Icon -->
+                <span>{message}</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True)
+    else:
+        # Right-aligned messages (user)
+        icon = "👤"  # User icon (or use an image URL)
+        alignment = "right"
+        bg_color = "#0078D4"  # Blue for user
+        text_color = "#ffffff"  # White text
+        st.markdown(
+        f"""
+        <div style='display: flex; justify-content: {alignment}; margin-bottom: 10px;'>
+            <div style='display: flex; align-items: center; max-width: 70%; 
+                        background-color: {bg_color}; color: {text_color}; 
+                        padding: 10px; border-radius: 10px;'>
+                <span>{message}</span>
+                <span style='margin-left: 10px;'>{icon}</span>  <!-- Icon -->
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True)
+
+    # HTML for message rendering
+  
+
+
+
+################################################ main Code ###########################################################
+################################################ main Code ###########################################################
+
 
 def main():
-    st.title("Chat With Uskt Chatbot")
 
+    msg = "Welcom to USKT chatbot! how can i help you?"
+    # if len(st.session_state.messages) < 1:
+    render_message(msg, "assistant")
+
+    
+    # st.title("Chat With Uskt Chatbot")
+      # Add a button to clear the conversation
+
+    # if len(st.session_state.messages) > 1:
+    #     if st.button("Reset Conversation"):
+    #         st.session_state.messages = []
+    #         st.rerun() 
+
+    
     # Initialize session state variables
     if 'messages' not in st.session_state:
         st.session_state.messages = []
@@ -150,60 +342,72 @@ def main():
         st.session_state.chunks = []
     if 'vectorizer' not in st.session_state:
         st.session_state.vectorizer = None
+    if 'conversation_log' not in st.session_state:
+        st.session_state.conversation_log = []  # To store all messages in a session
+
 
     # st.sidebar.header("Upload PDF")
     # pdf_file = st.sidebar.file_uploader("Upload a PDF file", type="pdf")
-    pdf_file = 'uskt_data'
 
-    # pdf_file = "University of Sialkot chatbot.pdf"
+
+
+    
+
+
+    pdf_file = ["./data/Uskt_Data.pdf", "./data/navigation.pdf", "./data/ReTrain_Data.pdf" , "./data/mozdoc.pdf"]
+
     if pdf_file:
-        st.session_state.chunks = get_or_create_chunks(pdf_file)
-        st.session_state.vectorizer = get_vectorizer(st.session_state.chunks)
-    if st.session_state.chunks and st.session_state.vectorizer:
-        st.sidebar.success("PDF processed successfully!")
-    else:
-        st.sidebar.error("Failed to process PDF. Please try again.")
+        with st.spinner("Processing PDF..."):
+            st.session_state.chunks = get_or_create_chunks(pdf_file)
+            st.session_state.vectorizer = get_vectorizer(st.session_state.chunks)
+        if st.session_state.chunks and st.session_state.vectorizer:
+            print("PDF processed successfully!")
+            # sucess=st.success("PDF processed successfully!")
+            # time.sleep(3) # Wait for 3 seconds
+            # sucess.empty()
+        else:
+            st.error("Failed to process PDF. Please try again.")
+            
 
+    
 
-    # # pdf_file = "University of Sialkot chatbot.pdf"
-    # if pdf_file:
-    #     with st.spinner("Processing PDF..."):
-    #         st.session_state.chunks = get_or_create_chunks(pdf_file)
-    #         st.session_state.vectorizer = get_vectorizer(st.session_state.chunks)
-    #     if st.session_state.chunks and st.session_state.vectorizer:
-    #         st.sidebar.success("PDF processed successfully!")
-    #     else:
-    #         st.sidebar.error("Failed to process PDF. Please try again.")
-
-    # selected_model = st.selectbox("Select Model", MODELS, index=MODELS.index(st.session_state.model))
-    # if selected_model != st.session_state.model:
-    #     st.session_state.model = selected_model
-
-    # Display chat history
     for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+        render_message(message["content"], message["role"])
 
+  
+    
     # Chat input
     if prompt := st.chat_input("Ask a question about Uskt"):
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
+        st.session_state.conversation_log.append({"role": "\n\n user", "content": prompt})
+        render_message(prompt, "user")
+        
+        relevant_chunks = find_most_relevant_chunks(prompt, st.session_state.chunks, st.session_state.vectorizer, top_k=6) if st.session_state.chunks else []
+        context = "\n\n".join(relevant_chunks)
 
-        with st.chat_message("assistant"):
-            message_placeholder = st.empty()
-            relevant_chunks = find_most_relevant_chunks(prompt, st.session_state.chunks, st.session_state.vectorizer) if st.session_state.chunks else []
-            context = "\n\n".join(relevant_chunks)
-
+        # prompt_limit = f"{st.session_state.messages} + {context}"
+        # render_message(f"Len of chunk0 = {len(relevant_chunks[0])} \n Len of chunk1 = {len(relevant_chunks[1])} \n Len of chunk2 =  total chunks length:{len(relevant_chunks[2])} \n  relevent chunk:{len(relevant_chunks)}---------prompt size: {len(prompt_limit)}--------session state message len: -{len(st.session_state.messages)}--------Context length: -{len(context)}", "assistant")
+        with st.spinner("Generating response..."):
             full_response = get_ai_response(st.session_state.messages, context, st.session_state.model)
-            message_placeholder.markdown(full_response)
+
+        render_message(full_response, "assistant")
+        # render_message(context,  "assistant")
 
         st.session_state.messages.append({"role": "assistant", "content": full_response})
+        # st.session_state.conversation_log.append({"role": "assistant", "content": full_response})
+        
+        ################# Sending whatsapp log ##########################33
+    
+    # if len(st.session_state.conversation_log) >= 4:  # Example threshold
+    #     # Send the log to WhatsApp
+    #     send_to_whatsapp(st.session_state.conversation_log)
+    #     # Optionally clear the log after sending
+    #     print("whatsapp message send")
+    #     st.session_state.conversation_log = []
 
-    # Add a button to clear the conversation
-   # if st.button("Clear Conversation"):
-    #    st.session_state.messages = []
-     #   st.experimental_rerun()
+
+
+    
 
 if __name__ == "__main__":
     main()
