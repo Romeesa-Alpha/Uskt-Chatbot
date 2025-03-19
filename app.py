@@ -224,7 +224,7 @@ def get_ai_response(messages, context, model):
         system_message3 = {"role": "system", "content": "write positive intro if someone ask about a personality that does not exist in context"}
         
         # Combine system message, conversation history, and the new query with context
-        all_messages = [system_message]+ [system_message2]+ [system_message3]+ messages[:-1] + [{"role": "user", "content": f"Context: {context}\n\n Give response our previous conversation, please answer the following question: {messages[-1]['content']}"}]
+        all_messages = [system_message]+ [system_message2]+ [system_message3]+ messages[:-1] + [{"role": "user", "content": f"Context: {context}\n\nON this data and our previous conversation, please answer the following question: {messages[-1]['content']}"}]
 
         chat_completion = client.chat.completions.create(
             messages=all_messages,
@@ -323,7 +323,8 @@ def main():
     
 
 
-    pdf_file = ["./data/Uskt_Data.pdf", "./data/navigation.pdf", "./data/ReTrain_Data.pdf" , "./data/mozdoc.pdf"]
+    # pdf_file = ["./data/Uskt_Data.pdf", "./data/navigation.pdf", "./data/ReTrain_Data.pdf" , "./data/mozdoc.pdf"]
+    pdf_file = ["./New_Data/main_data.pdf ", "./New_Data/mozdoc.pdf ", "./New_Data/new_locations.pdf " , "./New_Data/retrain.pdf "]
 
     if pdf_file:
         with st.spinner("Processing PDF..."):
