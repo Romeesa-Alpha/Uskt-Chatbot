@@ -324,7 +324,7 @@ def main():
 
     # pdf_file = ["./data/Uskt_Data.pdf", "./data/navigation.pdf", "./data/ReTrain_Data.pdf" , "./data/mozdoc.pdf"]
 
-    pdf_file = [ "./new_data/new_locations.pdf", "./new_data/moz.pdf", "./new_data/data.pdf" , "./new_data/ReTrain.pdf"]
+    pdf_file = ["./new_data/new_locations.pdf", "./new_data/moz.pdf", "./new_data/data.pdf", "./new_data/ReTrain.pdf"]
 
     if pdf_file:
         with st.spinner("Processing PDF..."):
@@ -352,7 +352,7 @@ def main():
         st.session_state.conversation_log.append({"role": "\n\n user", "content": prompt})
         render_message(prompt, "user")
         
-        relevant_chunks = find_most_relevant_chunks(prompt, st.session_state.chunks, st.session_state.vectorizer, top_k=6) if st.session_state.chunks else []
+        relevant_chunks = find_most_relevant_chunks(prompt, st.session_state.chunks, st.session_state.vectorizer, top_k=3) if st.session_state.chunks else []
         context = "\n\n".join(relevant_chunks)
 
         # prompt_limit = f"{st.session_state.messages} + {context}"
