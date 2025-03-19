@@ -360,6 +360,9 @@ def main():
         with st.spinner("Generating response..."):
             full_response = get_ai_response(st.session_state.messages, context, st.session_state.model)
 
+        
+        render_message(context, "assistant")
+
         render_message(full_response, "assistant")
         # render_message(context,  "assistant")
 
