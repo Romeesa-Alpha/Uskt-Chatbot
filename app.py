@@ -324,7 +324,7 @@ def main():
 
     # pdf_file = ["./data/Uskt_Data.pdf", "./data/navigation.pdf", "./data/ReTrain_Data.pdf" , "./data/mozdoc.pdf"]
 
-    pdf_file = ["./new_data/data.pdf", "./new_data/moz.pdf", "./new_data/new_locations.pdf" , "./new_data/ReTrain.pdf"]
+    pdf_file = [ "./new_data/new_locations.pdf", "./new_data/moz.pdf", "./new_data/data.pdf" , "./new_data/ReTrain.pdf"]
 
     if pdf_file:
         with st.spinner("Processing PDF..."):
