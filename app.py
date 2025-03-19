@@ -323,8 +323,8 @@ def main():
     
 
 
-    pdf_file = ["./data/Uskt_Data.pdf", "./data/navigation.pdf", "./data/ReTrain_Data.pdf" , "./data/mozdoc.pdf"]
-    # pdf_file = ["./New_Data/main_data.pdf ", "./New_Data/mozdoc.pdf ", "./New_Data/new_locations.pdf " , "./New_Data/retrain.pdf "]
+    # pdf_file = ["./data/Uskt_Data.pdf", "./data/navigation.pdf", "./data/ReTrain_Data.pdf" , "./data/mozdoc.pdf"]
+    pdf_file = ["./New_Data/main_data.pdf ", "./New_Data/mozdoc.pdf "]
 
     if pdf_file:
         with st.spinner("Processing PDF..."):
